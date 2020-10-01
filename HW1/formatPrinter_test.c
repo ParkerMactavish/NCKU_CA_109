@@ -9,17 +9,16 @@ void self_printf(
     va_start(ap, format);
     char chr, *pChr, digit, digits[32];
     int value, shiftAmt = 0, remain, capFlag, digitIdx;
-    int sg, exp, fraction;
     while(chr = *format ++) {
         if(chr == '%'){
             switch(chr = *format++){
                 case 's':
                     for(pChr = va_arg(ap, char*);*pChr;pChr++)
                         putchar(*pChr);
-                    break;
+                    continue;
                 case 'c':
                     putchar((char)va_arg(ap, int));
-                    break;
+                    continue;
                 case 'x': 
                     capFlag = 0;
                 case 'X':
@@ -37,25 +36,23 @@ void self_printf(
                     break;
                 case '%':
                     putchar('%');
-                    break;
+                    continue;
                 default:
                     putchar(chr);
+                    continue;
             }
-            if(shiftAmt){
-                value = va_arg(ap, unsigned int);
-                digitIdx = 0;
-                do {
-                    digit = (char)(value & remain);
-                    value >>=shiftAmt;
-                    if(digit > 9){
-                        digit += (capFlag)?0x7:0x27;
-                    }
-                    digits[digitIdx++] = digit + '0';
-                }while(value && digitIdx < sizeof(digits));
-                do {putchar(digits[--digitIdx]);}while(digitIdx);
-                shiftAmt = 0;
-            }
-            continue;
+            value = va_arg(ap, unsigned int);
+            digitIdx = 0;
+            do {
+                digit = (char)(value & remain);
+                value >>=shiftAmt;
+                if(digit > 9){
+                    digit += (capFlag)?0x7:0x27;
+                }
+                digits[digitIdx++] = digit + '0';
+            }while(value && digitIdx < sizeof(digits));
+            do {putchar(digits[--digitIdx]);}while(digitIdx);
+            shiftAmt = 0;
         }
         else{
             putchar(chr);
@@ -71,11 +68,6 @@ int main(int argc, char* argv[]){
                     testHex2 = 0xCDEF,
                     testOct = 012345670,
                     testBin = 0b00111011000101001111010100001111;
-    self_printf("%s\nnormalString\nCharInArg%c\n", pChr, chr);
-    self_printf("Not supporting: %e%e%r%d\n");
-    self_printf("Hex0: %x\t%X\n", testHex0, testHex0);
-    self_printf("Hex1: %x\t%X\n", testHex1, testHex1);
-    self_printf("Hex2: %x\t%X\n", testHex2, testHex2);
-    self_printf("Oct: %o\n", testOct);
+    self_printf("%s\nnormalString\nCharInArg%c\nNot supporting: %e%e%r%d\nHex0: %x    %X\nHex1: %x    %X\nHex2: %x    %X\nOct: %o\n", pChr, chr, testHex0, testHex0, testHex1, testHex1, testHex2, testHex2, testOct);
     return 0;
 }
