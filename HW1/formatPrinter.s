@@ -72,7 +72,7 @@ self_print:
     addi t1, t1, 4          # (char)va_arg(ap, int)
     addi a7, zero, 11
     ecall                   # putchar
-    jal  zero, else_end
+    jal  zero, while_begin
     case_c_end:
 
     addi t3, zero, 120
@@ -113,13 +113,13 @@ self_print:
     addi a0, zero, 37
     addi a7, zero, 11
     ecall                   # putchar('%')
-    jal  zero, else_end
+    jal  zero, while_begin
     case_%_end:
 
     addi a0, t2, 0
     addi a7, zero, 11
     ecall                   # putchar(chr)
-    jal  zero, else_end
+    jal  zero, while_begin
 
     switch_end:
     lw   t5, 0(t1)          
@@ -153,13 +153,13 @@ self_print:
     ecall                   # putchar(digits[--digitIdx]);
     sub  t6, t6, sp         # restore digitIdx
     bgt  t6, zero, dump     # while(digitIdx)
-    jal  zero, else_end
+    jal  zero, while_begin
 
     else:                   # else
     addi a0, t2, 0
     addi a7, zero, 11
     ecall                   # putchar(chr);
-    else_end:               # end if(chr == '%')
     jal  zero, while_begin
     while_end:
+    
     jalr zero, ra, 0
