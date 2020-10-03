@@ -5,3 +5,5 @@ HW1/flowchart.drawio filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.drawio filter=lfs diff=lfs merge=lfs -text
+HW1/ExecutionResult_C.jpg filter=lfs diff=lfs merge=lfs -text
+HW1/Supplementary/ filter=lfs diff=lfs merge=lfs -text

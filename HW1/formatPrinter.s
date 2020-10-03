@@ -17,7 +17,7 @@ main:
     lui  s6, 0x3b14f
     addi s6, s6, 0x50f      # testBin = 0b00111011000101001111010100001111 = 0x3b14f50f
 
-    la   t0, str1           # "%s\nnormalString\nCharInArg%c\nNot supporting: %e%e%r%d\nHex0: %x    %X\nHex1: %x    %X\nHex2: %x    %X\nOct: %o\nBin: %b"
+    la   t0, str1           # "%s\nnormalString\nCharInArg: %c\nPercentSign: %%\nNot supporting: %e%e%r%d\nHex0: %x    %X\nHex1: %x    %X\nHex2: %x    %X\nOct: %o\nBin: %b"
     addi sp, sp, -44
     sw   t0, 0(sp)
     sw   s0, 4(sp)
@@ -39,10 +39,13 @@ main:
 self_print:
     lw   t0, 0(sp)          # const char* format
     addi t1, sp, 4          # va_list ap; va_start(ap, format);
-    addi sp, sp, -40        # int shiftAmt;
-                            # int capFlag;
+    addi sp, sp, -40        # s1
+                            # s0
                             # char digits[32];
-    while_begin:
+    sw   s0, 32(sp)
+    sw   s1, 36(sp)
+
+while_begin:
     lb   t2, 0(t0)          # chr = *format
     beq  t2, zero, while_end
     addi t0, t0, 1          # format++
@@ -52,100 +55,93 @@ self_print:
     addi t0, t0, 1          # format ++
 
     addi t3, zero, 115
-    bne  t2, t3, case_s_end # case 's'
+    bne  t2, t3, case_c     # case 's'
     lw   t3, 0(t1)
     addi t1, t1, 4          # pChr = va_arg(ap, char*)
     lb   t4, 0(t3)          
-    case_s:                 # for loop
-    beq  t4, zero, else_end # *pChr != 0
+case_s:                     # for loop
+    beq  t4, zero, while_begin # *pChr != 0
     addi a0, t4, 0
     addi a7, zero, 11
     ecall                   # putchar(*pChr)
     addi t3, t3, 1
     lb   t4, 0(t3)
     jal  zero, case_s
-    case_s_end:
 
+case_c:
     addi t3, zero, 99
-    bne  t2, t3, case_c_end # case 'c'
+    bne  t2, t3, case_x     # case 'c'
     lw   a0, 0(t1)
     addi t1, t1, 4          # (char)va_arg(ap, int)
     addi a7, zero, 11
     ecall                   # putchar
     jal  zero, while_begin
-    case_c_end:
 
+case_x:
     addi t3, zero, 120
-    bne  t2, t3, case_x_end # case 'x'
+    bne  t2, t3, case_x_    # case 'x'
     addi t2, zero, 0        # capFlag = 0
-    sw   t2, 32(sp)         # store capFlag
-    jal  zero, case_xX_begin
-    case_x_end:
+    jal  zero, case_xx
+case_x_:
     addi t3, zero, 88
-    bne  t2, t3, case_xX_end # case 'X'
-    addi t2, zero, 1        # capFlag = 0
-    sw   t2, 32(sp)         # store capFlag
-    case_xX_begin:
+    bne  t2, t3, case_o     # case 'X'
+    addi t2, zero, 1        # capFlag = 1
+case_xx:
     addi t3, zero, 4        # shiftAmt = 4
-    sw   t3, 36(sp)         # store shiftAmt
     addi t4, zero, 15       # remain = 15
     jal  zero, switch_end
-    case_xX_end:
 
+case_o:
     addi t3, zero, 111
-    bne  t2, t3, case_o_end # case 'o'
+    bne  t2, t3, case_b     # case 'o'
     addi t3, zero, 3        # shfitAmt = 3
-    sw   t3, 36(sp)         # store shiftAmt
     addi t4, zero, 7        # remain = 7
     jal  zero, switch_end
-    case_o_end:
 
+case_b:
     addi t3, zero, 98
-    bne  t2, t3, case_b_end # case 'b'
+    bne  t2, t3, case_%     # case 'b'
     addi t3, zero, 1        # shiftAmt = 1
-    sw   t3, 36(sp)         # store shiftAmt
     addi t4, zero, 1        # remain = 7
     jal  zero, switch_end
-    case_b_end:
-    
+
+case_%:    
     addi t3, zero, 37
-    bne  t2, t3, case_%_end # case '%'
+    bne  t2, t3, default    # case '%'
     addi a0, zero, 37
     addi a7, zero, 11
     ecall                   # putchar('%')
     jal  zero, while_begin
-    case_%_end:
 
+default:
     addi a0, t2, 0
     addi a7, zero, 11
     ecall                   # putchar(chr)
     jal  zero, while_begin
 
-    switch_end:
+switch_end:
     lw   t5, 0(t1)          
     addi t1, t1, 4          # value = va_arg(ap, unsigned int); 
     addi t6, zero, 0        # digitIdx = 0
-    parse:
-    and  t2, t5, t4         # digit = (char)(value & remain);
+parse:
+    and  s0, t5, t4         # digit = (char)(value & remain);
     srl  t5, t5, t3         # value >> = shiftAmt;
-    addi t2, t2, -10
-    blt  t2, zero, not_Hex  # if(digit > 9)
-    lw   t3, 32(sp)         # load capFlag
-    slli t3, t3, 5          # 0x20 if capFlag == 1
-    xor  t3, t3, zero       # 0x20 if capFlag == 0
-    addi t3, t3, 7          # (capFlag)?0x7:0x27
-    add  t2, t2, t3         # digit += (capFlag)?0x7:0x27;
-    lw   t3, 36(sp)         # load shiftAmt
-    not_Hex:
-    addi t2, t2, 58         # digit + '0' + 10@L:112
+    addi s0, s0, -10
+    blt  s0, zero, not_Hex  # if(digit > 9)
+    slti s1, t2, 1
+    slli s1, s1, 5          # 0x20 if capFlag == 0
+    addi s1, s1, 7          # (capFlag)?0x7:0x27
+    add  s0, s0, s1         # digit += (capFlag)?0x7:0x27;
+not_Hex:
+    addi s0, s0, 58         # digit + '0' + 10@L:112
     add  t6, t6, sp         # &digits[digitIdx]
-    sw   t2, 0(t6)          # digits[digitIdx] = digit + '0';
+    sw   s0, 0(t6)          # digits[digitIdx] = digit + '0';
     sub  t6, t6, sp         # restore digitIdx
     addi t6, t6, 1          # digitIdx ++
     ble  t5, zero, dump     
-    addi t2, zero, 32
-    blt  t6, t2, parse      # while(value && digitIdx < sizeof(digits));
-    dump:
+    addi s1, zero, 32
+    blt  t6, s1, parse      # while(value && digitIdx < sizeof(digits));
+dump:
     addi t6, t6, -1         # -- digitIdx
     add  t6, t6, sp         # &digits[--digitIdx]
     lb   a0, 0(t6)
@@ -155,11 +151,13 @@ self_print:
     bgt  t6, zero, dump     # while(digitIdx)
     jal  zero, while_begin
 
-    else:                   # else
+else:                   # else
     addi a0, t2, 0
     addi a7, zero, 11
     ecall                   # putchar(chr);
     jal  zero, while_begin
-    while_end:
-    
+while_end:
+    lw   s1, 36(sp)
+    lw   s0, 32(sp)
+    addi sp, sp, 40
     jalr zero, ra, 0
